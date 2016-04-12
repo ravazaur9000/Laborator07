@@ -1,13 +1,25 @@
 package ro.pub.cs.systems.pdsd.lab07.googlesearcher;
 
+import java.io.IOException;
+
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import ro.pub.cs.systems.pdsd.lab07.googlesearcher.general.Constants;
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 public class GoogleSearcherActivity extends Activity {
 	
@@ -36,6 +48,29 @@ public class GoogleSearcherActivity extends Activity {
 			// - mimetype is text/html
 			// - encoding is UTF-8
 			// - history is null
+			
+			HttpClient httpClient = new DefaultHttpClient();
+			HttpGet httpGet = new HttpGet(Constants.GOOGLE_INTERNET_ADDRESS + keyword);
+			ResponseHandler<String> responseHandler = new BasicResponseHandler();
+			try {
+				final String content = httpClient.execute(httpGet, responseHandler);
+				googleResultsWebView.post(new Runnable() {
+					@Override
+					public void run() {
+						googleResultsWebView.loadDataWithBaseURL(Constants.GOOGLE_INTERNET_ADDRESS, content, Constants.MIME_TYPE, Constants.CHARACTER_ENCODING, null);
+					}
+				});
+			} catch (ClientProtocolException clientProtocolException) {
+				Log.e(Constants.TAG, clientProtocolException.getMessage());
+				if (Constants.DEBUG) {
+					clientProtocolException.printStackTrace();
+				}
+			} catch (IOException ioException) {
+				Log.e(Constants.TAG, ioException.getMessage());
+				if (Constants.DEBUG) {
+					ioException.printStackTrace();
+				}
+			}
 
 		}
 	}
@@ -52,6 +87,17 @@ public class GoogleSearcherActivity extends Activity {
 			// split a multiple word (separated by space) keyword and link them through +
 			// prepend the keyword with "search?q=" string
 			// start the GoogleSearcherThread passing the keyword
+			String keyword = keywordEditText.getText().toString();
+			if (keyword == null || keyword.isEmpty()) {
+				Toast.makeText(getApplication(), Constants.EMPTY_KEYWORD_ERROR_MESSAGE, Toast.LENGTH_LONG).show();
+			} else {
+				String[] keywords = keyword.split(" ");
+				keyword = Constants.SEARCH_PREFIX + keywords[0];
+				for (int k = 1; k < keywords.length; k++) {
+					keyword += "+" + keywords[k];
+				}
+				new GoogleSearcherThread(keyword).start();
+			}
 
 		}
 	}
